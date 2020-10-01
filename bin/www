@@ -9,6 +9,7 @@ const debug = require("debug")("log-dashboard:server");
 const http = require("http");
 const WebSocket = require('ws');
 const fs = require('fs');
+const { getSettings } = require('../services/settings-service.js');
 const { chunk } = require("lodash");
 
 /**
@@ -39,7 +40,13 @@ wss.on('connection', ws => {
   ws.on('message', filePath => {
     fs.watch(filePath, () => {
       fs.createReadStream(filePath).on('data', chunk => {
-        const logsArr = chunk.toString().split("\n");
+        const settings = getSettings();
+        let logsArr = chunk.toString().split("\n");
+
+        if (settings.filter) {
+          logsArr = logsArr.filter(line => !line.includes(settings.filter));
+        }
+
         const logsStr = logsArr.reverse().join("\n");
         
         ws.send(logsStr);
